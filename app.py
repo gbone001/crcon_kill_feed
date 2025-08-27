@@ -1,10 +1,12 @@
 import os
+from dotenv import load_dotenv
 import json
 from flask import Flask, send_from_directory, jsonify
 from flask_socketio import SocketIO, emit
 from log_stream_manager import LogStreamManager
 from helpers.filters import parse_args, should_show_kill
 
+load_dotenv()
 app = Flask(__name__, static_folder='public')
 socketio = SocketIO(app, cors_allowed_origins="*")
 
@@ -24,21 +26,28 @@ def serve_static(path):
     else:
         return send_from_directory(app.static_folder, 'index.html')
 
+
 @socketio.on('connect')
 def handle_connect():
-    connected_clients.add(request.sid)
+    sid = getattr(handle_connect, 'sid', None)
+    if sid:
+        connected_clients.add(sid)
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    connected_clients.discard(request.sid)
+    sid = getattr(handle_disconnect, 'sid', None)
+    if sid:
+        connected_clients.discard(sid)
 
 # Listen for KILL events from log stream manager
-@log_stream_manager.on('KILL')
+
 def handle_kill(log):
     if not should_show_kill(log, filters):
         return
     data = { 'type': 'KILL', 'payload': log }
     socketio.emit('kill_event', data)
+
+log_stream_manager.on('KILL', handle_kill)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))

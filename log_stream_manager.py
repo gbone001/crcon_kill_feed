@@ -1,9 +1,11 @@
 import os
+from dotenv import load_dotenv
 import threading
 import websocket
 import json
 from collections import defaultdict
 
+load_dotenv()
 class LogStreamManager:
     def __init__(self):
         self.ws = None
